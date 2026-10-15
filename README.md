@@ -97,6 +97,16 @@ resource is missing or empty.
 - `Down()` restores the previous definition: `GetCustomerSummaryV2.Down` re-applies v1;
   `AddGetCustomerSummaryProcedure.Down` drops the procedure because none existed before it.
 
+To revert a tenant database to an earlier procedure version, migrate it down to the migration that introduced that
+version, either by running the generated `<MigrationId>.down.sql` files newest first, or with `dotnet ef`:
+
+```bash
+export MULTITENANT_DESIGNTIME_CONNECTION='Server=...;Database=MultiTenantDemo_TenantA;...'
+dotnet ef database update AddGetCustomerSummaryProcedure $CLIENT   # GetCustomerSummary back to v1
+dotnet ef database update InitialCreate $CLIENT                    # procedure dropped
+dotnet ef database update $CLIENT                                  # forward to the latest version again
+```
+
 ## Running locally
 
 Prerequisites: .NET 10 SDK and Docker (or any disposable SQL Server 2016 SP1+).
@@ -194,9 +204,9 @@ and writes:
 | `migrations/client/idempotent.sql` | `dotnet ef migrations script --idempotent $CLIENT` |
 | `migrations/system/...` | The same three commands with `$SYSTEM` |
 
-The script rebuilds each folder from scratch, so files for removed migrations disappear. CI does not build or
-check migrations, and tests create their schema with `EnsureCreated` plus the latest procedure script, so
-nothing in the repository depends on migrations being committed. `migrations/` is git-ignored so the generated SQL
+The script rebuilds each folder from scratch, so files for removed migrations disappear. The integration tests
+apply the committed client migrations to every tenant database, and `ClientMigrationTests` walks
+`dbo.GetCustomerSummary` down from v2 to v1 to nothing and back up, so CI fails if a migration or its `Down()` breaks. `migrations/` is git-ignored so the generated SQL
 stays local. The script needs `jq`.
 
 To change a stored procedure: add `Sql/<Area>/<Name>.vN.sql`, reference it from `SqlScripts`, create an empty

@@ -26,6 +26,11 @@ public sealed class TenantRoutingApiTests(SqlServerFixture sql) : IAsyncLifetime
         _inactive = new TestTenant("tenant-inactive", await sql.CreateDatabaseAsync("apiinactive"), IsActive: false);
         _misconfigured = new TestTenant("tenant-misconfigured", "master");
 
+        foreach (var tenant in new[] { _tenantA, _tenantB, _inactive })
+        {
+            await ClientSchema.MigrateAsync(sql, tenant.DatabaseName);
+        }
+
         _systemDatabase = await sql.CreateDatabaseAsync("system");
         await TenantConfiguration.SeedAsync(sql, _systemDatabase, [_tenantA, _tenantB, _inactive, _misconfigured]);
     }
