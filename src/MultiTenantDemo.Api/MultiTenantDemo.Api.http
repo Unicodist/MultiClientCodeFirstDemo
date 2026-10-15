@@ -1,0 +1,19 @@
+@host = http://localhost:5029
+
+GET {{host}}/api/customers
+X-Tenant-Id: tenant-a
+
+###
+POST {{host}}/api/customers
+X-Tenant-Id: tenant-a
+Content-Type: application/json
+
+{ "name": "Ada Lovelace", "email": "ada@example.com" }
+
+###
+GET {{host}}/api/customers/summary?createdSinceUtc=2026-01-01T00:00:00Z
+X-Tenant-Id: tenant-a
+
+###
+GET {{host}}/api/customers
+X-Tenant-Id: tenant-b
