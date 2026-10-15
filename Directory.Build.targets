@@ -1,0 +1,32 @@
+<Project>
+
+  <!-- Fails the build on T-SQL syntax errors in *.Data projects (syntax only, no object resolution). -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Data'))">
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+    <SqlScript Include="**\*.sql" Exclude="bin\**;obj\**" />
+  </ItemGroup>
+
+  <UsingTask TaskName="ValidateTSql" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Reference Include="$(PkgMicrosoft_SqlServer_TransactSql_ScriptDom)\lib\netstandard2.0\Microsoft.SqlServer.TransactSql.ScriptDom.dll" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        foreach (var file in Files)
+        {
+            var path = file.GetMetadata("FullPath");
+            using var reader = System.IO.File.OpenText(path);
+            new Microsoft.SqlServer.TransactSql.ScriptDom.TSql170Parser(true).Parse(reader, out var errors);
+            foreach (var e in errors)
+                Log.LogError(null, "SQL" + e.Number, null, path, e.Line, e.Column, 0, 0, e.Message);
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="ValidateSqlScripts" BeforeTargets="CoreCompile" Condition="'@(SqlScript)' != ''">
+    <ValidateTSql Files="@(SqlScript)" />
+  </Target>
+
+</Project>
